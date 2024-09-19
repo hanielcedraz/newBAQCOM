@@ -327,7 +327,8 @@ if (opt$libraryType == "pairEnd") {
         successLog <- lapply(out, function(x) {
             successLog <- grep("^Input Read Pairs:", readLines(x), value = TRUE)
         
-            cli_alert_success("{successLog}")   
+            sample <- str_remove_all(basename(x), "_trimmomatic_out.log")
+            cli_alert_success("{sample}: {successLog}")   
             
         }) %>% unique()
         

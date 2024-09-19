@@ -54,7 +54,7 @@ runTrimmomatic <- function(query, trimmomatic, libType = "PE", cores, nSamples, 
             })
             
             
-            if (class(tryingTrim) == 0) {
+            if (tryingTrim == 0) {
                 cli_process_done()
             } else {
                 cli_process_failed()
