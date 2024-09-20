@@ -1,8 +1,9 @@
 #!/usr/bin/env Rscript
 
 #trimmomatic_dir <- paste('XXX/Trimmomatic-0.39/')
-trimmomatic_dir <- paste('../BAQCOM/Trimmomatic-0.39/')
-trimmomatic <- paste(trimmomatic_dir, 'trimmomatic-0.39.jar', sep = "")
+#trimmomatic_dir <- paste('/mnt/isilon/Scratch/rd-nfs/hcedraz/personal/BAQCOM/Trimmomatic-0.39/')
+
+#trimmomatic <- paste(trimmomatic_dir, 'trimmomatic-0.39.jar', sep = "")
 
 ########################################
 ### LOADING PACKAGES
@@ -59,22 +60,22 @@ option_list <- list(
         help = "Column name from the sample sheet to use as read folder names [default %default]",
         dest = "samplesColumn"
     ),
-    make_option(
-        opt_str = c("-l", "--fastqc"), 
-        action = 'store_true',
-        type = "logical",
-        default = FALSE,
-        help = "Use this option if you want to run FastQC software  [default %default]",
-        dest = "fastqc"
-    ),
-    make_option(
-        opt_str = c("-r", "--multiqc"),
-        action = 'store_true',
-        type = "logical",
-        default = FALSE,
-        help = "Use this option if you want to run multiqc software  [default %default]",
-        dest = "multiqc"
-    ),
+    # make_option(
+    #     opt_str = c("-l", "--fastqc"), 
+    #     action = 'store_true',
+    #     type = "logical",
+    #     default = FALSE,
+    #     help = "Use this option if you want to run FastQC software  [default %default]",
+    #     dest = "fastqc"
+    # ),
+    # make_option(
+    #     opt_str = c("-r", "--multiqc"),
+    #     action = 'store_true',
+    #     type = "logical",
+    #     default = FALSE,
+    #     help = "Use this option if you want to run multiqc software  [default %default]",
+    #     dest = "multiqc"
+    # ),
     make_option(
         opt_str = c("-o", "--output"), 
         type = "character", 
@@ -184,8 +185,9 @@ opt <- parse_args(OptionParser(option_list = option_list, description =  paste('
 
 cat("\n\n");cli_rule(center = col_blue("Starting {opt$libraryType} Quality Control"));cat("\n\n")
 
+functionsPath <- "/mnt/isilon/Scratch/rd-nfs/hcedraz/personal/newBAQCOM/src"
+functionsToSource <- list.files(functionsPath, full.names = TRUE)
 
-functionsToSource <- list.files("src", full.names = TRUE)
 
 cat("\n");cli_h1("Loading functions")
 for (i in functionsToSource) {
@@ -200,14 +202,14 @@ for (i in functionsToSource) {
 ### PERFORMING QC ANALYSIS
 ########################################
 
-
-multiqc <- system('which multiqc 2> /dev/null', ignore.stdout = TRUE, ignore.stderr = TRUE)
-if (opt$multiqc) {
-    if (multiqc != 0) {
-        cat("\n\n");cli_abort(c("x" = "Multiqc is not installed. Remove -r parameter or install it and run again"))
-        
-    }
-}
+# 
+# multiqc <- system('which multiqc 2> /dev/null', ignore.stdout = TRUE, ignore.stderr = TRUE)
+# if (opt$multiqc) {
+#     if (multiqc != 0) {
+#         cat("\n\n");cli_abort(c("x" = "Multiqc is not installed. Remove -r parameter or install it and run again"))
+#         
+#     }
+# }
 
 
 # verify if sample_file exist
@@ -276,16 +278,14 @@ if (!file.exists(file.path(output_Folder))) dir.create(file.path(output_Folder),
 if (opt$libraryType == "pairEnd") {
     cat("\n\n");cli_rule(center = col_blue("START Trimmomatic PE"));cat("\n\n")
     reporstsFolder <- glue("{reports}/{report_folder}/")
-    trimmomatic <- "../BAQCOM/Trimmomatic-0.39/trimmomatic-0.39.jar"
+    # trimmomatic <- "../BAQCOM/Trimmomatic-0.39/trimmomatic-0.39.jar"
     
     
     trimmomatic.pair <- runTrimmomatic(
         query = qcquery, 
-        trimmomatic = trimmomatic,
         libType = "PE", 
         cores = opt$procs, 
         nSamples = opt$sampleToprocs, 
-        inputFolder = opt$Raw_Folder, 
         outputFolder = opt$output, 
         trimAdapter = opt$adapters, 
         leading = opt$leading,
@@ -299,14 +299,14 @@ if (opt$libraryType == "pairEnd") {
     
     if (!all(sapply(trimmomatic.pair , "==", 0L))) {
         
-        
+        # reporstsFolder <- "/mnt/dfsyn/seqdata/ST_Others/Run20240904_RNA-Seq/02-Reports/reportBaqcomQC/"
         out <- list.files(reporstsFolder, pattern = ".log", full.names = TRUE)
         
         errorLog <- lapply(out, function(x) {
-            errorLog <- grep("^Exception in thread|^sh:", readLines(x), value = TRUE)
+            errorLog <- grep("^Exception in thread|^sh:|Error:", readLines(x), value = TRUE)
             
             
-            if (str_detect(errorLog, "Exception in thread")) {
+            if (any(str_detect(errorLog, "Exception in thread"))) {
                 errorLog <- str_remove(errorLog, "Exception in thread \"main\" java.io.FileNotFoundException: ")
             } 
             
@@ -316,7 +316,7 @@ if (opt$libraryType == "pairEnd") {
         
         
         
-        quit_cli_abort(errorLog)
+        cat("\n\n");quit_cli_abort(errorLog)
         
     } else {
         
@@ -333,6 +333,12 @@ if (opt$libraryType == "pairEnd") {
         }) %>% unique()
         
         
+        # Moving SE files to another folder
+        seFolder <- glue("{opt$output}_SE")
+        if (!dir.exists(seFolder)) {
+            dir.create(seFolder, recursive = TRUE)
+        }
+        system(glue("mv {opt$output}/*SE* {seFolder}/"))
         
     }
     
@@ -341,15 +347,13 @@ if (opt$libraryType == "pairEnd") {
 } else if (opt$libraryType == "singleEnd") {
     cat("\n\n");cli_rule(center = col_blue("START Trimmomatic SE"));cat("\n\n")
     reporstsFolder <- glue("{reports}/{report_folder}/")
-    trimmomatic <- "../BAQCOM/Trimmomatic-0.39/trimmomatic-0.39.jar"
+    # trimmomatic <- "../BAQCOM/Trimmomatic-0.39/trimmomatic-0.39.jar"
     
     trimmomatic.single <- runTrimmomatic(
         query = qcquery, 
-        trimmomatic = trimmomatic,
         libType = "SE", 
         cores = opt$procs, 
         nSamples = opt$sampleToprocs, 
-        inputFolder = opt$Raw_Folder, 
         outputFolder = opt$output, 
         trimAdapter = opt$adapters, 
         leading = opt$leading,
@@ -402,11 +406,99 @@ if (opt$libraryType == "pairEnd") {
 # }
 
 
-# if (opt$multiqc) {
-#     cat("\n\n");cli_rule(center = col_blue("Running Multiqc"));cat("\n\n")
-#     system(glue("multiqc {reports} -o {reports}"))
-# }
+cat("\n\n");cli_rule(center = col_blue("Running QC stats"));cat("\n\n")
 
+if (opt$libraryType == "pairEnd") {
+    cat("\n\n");cli_h1(col_blue("START fastqc PE raw"));cat("\n\n")
+    fastqcFolderBefore <- glue("{reports}/fastqcBeforeQC")
+    # trimmomatic <- "../BAQCOM/Trimmomatic-0.39/trimmomatic-0.39.jar"
+    
+    
+    fastqcBefore.pair <- runFastqc(
+        query = qcquery,
+        cores = opt$procs, 
+        libType = "PE",
+        nSamples = opt$sampleToprocs, 
+        outputFolder = fastqcFolderBefore
+    )
+    
+    
+    if (!all(sapply(trimmomatic.pair , "==", 0L))) {
+
+       cat("\n\n");cli_abort(c("x" = "Something went wrong with fastqc"))
+
+    } else {
+
+        cat("\n\n");cli_alert_success("Fastqc raw Completed successfully");cat("\n")
+
+    }
+    
+    
+    # 
+    
+    cat("\n\n");cli_h1(col_blue("START fastqc PE cleaned"));cat("\n\n")
+    qcqueryAfter <- createQueryFastqc(samples = samples, readsFolder = opt$output, column = opt$samplesColumn, libraryType = opt$libraryType, quiet = TRUE)
+
+    fastqcFolderAfter <- glue("{reports}/fastqcAfter")
+        fastqcAfter.pair <- runFastqc(
+            query = qcqueryAfter,
+            cores = opt$procs,
+            libType = "PE",
+            nSamples = opt$sampleToprocs,
+            outputFolder = fastqcFolderAfter
+        )
+
+    
+    
+} else if (opt$libraryType == "singleEnd") {
+    cat("\n\n");cli_h1(col_blue("START fastqc PE raw"));cat("\n\n")
+    fastqcFolderBefore <- glue("{reports}/fastqcBeforeQC")
+    # trimmomatic <- "../BAQCOM/Trimmomatic-0.39/trimmomatic-0.39.jar"
+    
+    
+    fastqcBefore.pair <- runFastqc(
+        query = qcquery,
+        cores = opt$procs, 
+        libType = "SE",
+        nSamples = opt$sampleToprocs, 
+        outputFolder = fastqcFolderBefore
+    )
+    
+    
+    if (!all(sapply(trimmomatic.pair , "==", 0L))) {
+        
+        cat("\n\n");cli_abort(c("x" = "Something went wrong with fastqc"))
+        
+    } else {
+        
+        cat("\n\n");cli_alert_success("Fastqc raw Completed successfully");cat("\n")
+        
+    }
+    
+    
+    # 
+    
+    cat("\n\n");cli_h1(col_blue("START fastqc PE cleaned"));cat("\n\n")
+    qcqueryAfter <- createQueryFastqc(samples = samples, readsFolder = opt$output, column = opt$samplesColumn, libraryType = opt$libraryType, quiet = TRUE)
+    
+    fastqcFolderAfter <- glue("{reports}/fastqcAfter")
+    fastqcAfter.pair <- runFastqc(
+        query = qcqueryAfter,
+        cores = opt$procs,
+        libType = "SE",
+        nSamples = opt$sampleToprocs,
+        outputFolder = fastqcFolderAfter
+    )
+    
+    
+    
+}
+
+
+
+cat("\n\n");cli_h1(col_blue("START multiqc"));cat("\n\n")
+multiqcShell <- glue("multiqc --interactive --force -o {reporstsFolder} -n multiqc_report {fastqcFolderBefore} {fastqcFolderAfter}")
+system(multiqcShell)
 
 # Creating samples report
 cat("\n\n");cli_rule(center = col_blue("Creating samples report"));cat("\n\n")

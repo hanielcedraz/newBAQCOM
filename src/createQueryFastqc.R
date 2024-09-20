@@ -2,7 +2,7 @@
 
 
 
-createQueryFastqc <- function(libraryType = "pairEnd", samples = "samples.txt", readsFolder = "00-Fastq", column = "SAMPLE_ID") {
+createQueryFastqc <- function(libraryType = "pairEnd", samples = "samples.txt", readsFolder = "00-Fastq", column = "SAMPLE_ID", quiet = FALSE) {
     
     fastqList <- list()
     reads <- dir(path = file.path(readsFolder), pattern = "fastq.gz$", full.names = TRUE)
@@ -55,7 +55,10 @@ createQueryFastqc <- function(libraryType = "pairEnd", samples = "samples.txt", 
         
     }
     
-    cat("\n\n");cli_alert_success("Setting up {length(fastqList)} jobs");cat("\n\n")
+    if (!quiet) {
+        cat("\n\n");cli_alert_success("Setting up {length(fastqList)} jobs");cat("\n\n")
+    }
+    
     return(fastqList)
 }
 
