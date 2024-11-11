@@ -98,7 +98,7 @@ dependencies:
     - xz=5.2.10=h5eee18b_1
     - yaml=0.1.7=had09818_2
     - zlib=1.2.13=h5eee18b_0
-    - cutadapt=
+    - cutadapt=4.9
     - pip:
     - multiqc
 prefix: ~/miniconda3/envs/baqcom
